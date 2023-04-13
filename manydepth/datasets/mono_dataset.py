@@ -67,7 +67,7 @@ class MonoDataset(data.Dataset):
             self.contrast = (0.8, 1.2)
             self.saturation = (0.8, 1.2)
             self.hue = (-0.1, 0.1)
-            transforms.ColorJitter.get_params(
+            transforms.ColorJitter(
                 self.brightness, self.contrast, self.saturation, self.hue)
         except TypeError:
             self.brightness = 0.2
@@ -81,7 +81,7 @@ class MonoDataset(data.Dataset):
             self.resize[i] = transforms.Resize((self.height // s, self.width // s),
                                                interpolation=self.interp)
 
-        self.load_depth = self.check_depth()
+        # self.load_depth = self.check_depth()
 
     def preprocess(self, inputs, color_aug):
         """Resize colour images to the required scales and augment if required
@@ -101,6 +101,7 @@ class MonoDataset(data.Dataset):
             if "color" in k:
                 n, im, i = k
                 inputs[(n, im, i)] = self.to_tensor(f)
+
                 # check it isn't a blank frame - keep _aug as zeros so we can check for it
                 if inputs[(n, im, i)].sum() == 0:
                     inputs[(n + "_aug", im, i)] = inputs[(n, im, i)]
@@ -139,31 +140,35 @@ class MonoDataset(data.Dataset):
         do_color_aug = self.is_train and random.random() > 0.5
         do_flip = self.is_train and random.random() > 0.5
 
-        folder, frame_index, side = self.index_to_folder_and_frame_idx(index)
+        # folder, frame_index, side = self.index_to_folder_and_frame_idx(index)
+        folder, frame_index = self.index_to_folder_and_frame_idx(index)
 
-        poses = {}
-        if type(self).__name__ in ["CityscapesPreprocessedDataset", "CityscapesEvalDataset"]:
-            inputs.update(self.get_colors(folder, frame_index, side, do_flip))
-        else:
-            for i in self.frame_idxs:
-                if i == "s":
-                    other_side = {"r": "l", "l": "r"}[side]
-                    inputs[("color", i, -1)] = self.get_color(
-                        folder, frame_index, other_side, do_flip)
-                else:
-                    try:
-                        inputs[("color", i, -1)] = self.get_color(
-                            folder, frame_index + i, side, do_flip)
-                    except FileNotFoundError as e:
-                        if i != 0:
-                            # fill with dummy values
-                            inputs[("color", i, -1)] = \
-                                Image.fromarray(np.zeros((100, 100, 3)).astype(np.uint8))
-                            poses[i] = None
-                        else:
-                            raise FileNotFoundError(f'Cannot find frame - make sure your '
-                                                    f'--data_path is set correctly, or try adding'
-                                                    f' the --png flag. {e}')
+        # poses = {}
+        # if type(self).__name__ in ["CityscapesPreprocessedDataset", "CityscapesEvalDataset"]:
+        #     inputs.update(self.get_colors(folder, frame_index, side, do_flip))
+        # else:
+        #     for i in self.frame_idxs:
+        #         if i == "s":
+        #             other_side = {"r": "l", "l": "r"}[side]
+        #             inputs[("color", i, -1)] = self.get_color(
+        #                 folder, frame_index, other_side, do_flip)
+        #         else:
+        #             try:
+        #                 inputs[("color", i, -1)] = self.get_color(
+        #                     folder, frame_index + i, side, do_flip)
+        #             except FileNotFoundError as e:
+        #                 if i != 0:
+        #                     # fill with dummy values
+        #                     inputs[("color", i, -1)] = \
+        #                         Image.fromarray(np.zeros((100, 100, 3)).astype(np.uint8))
+        #                     poses[i] = None
+        #                 else:
+        #                     raise FileNotFoundError(f'Cannot find frame - make sure your '
+        #                                             f'--data_path is set correctly, or try adding'
+        #                                             f' the --png flag. {e}')
+
+        for i in self.frame_idxs:
+            inputs[("color", i, -1)] = self.get_color(folder, frame_index, do_flip)
 
         # adjusting intrinsics to match each scale in the pyramid
         for scale in range(self.num_scales):
@@ -178,7 +183,7 @@ class MonoDataset(data.Dataset):
             inputs[("inv_K", scale)] = torch.from_numpy(inv_K)
 
         if do_color_aug:
-            color_aug = transforms.ColorJitter.get_params(
+            color_aug = transforms.ColorJitter(
                 self.brightness, self.contrast, self.saturation, self.hue)
         else:
             color_aug = (lambda x: x)
@@ -189,10 +194,10 @@ class MonoDataset(data.Dataset):
             del inputs[("color", i, -1)]
             del inputs[("color_aug", i, -1)]
 
-        if self.load_depth and False:
-            depth_gt = self.get_depth(folder, frame_index, side, do_flip)
-            inputs["depth_gt"] = np.expand_dims(depth_gt, 0)
-            inputs["depth_gt"] = torch.from_numpy(inputs["depth_gt"].astype(np.float32))
+        # if self.load_depth and False:
+        #     depth_gt = self.get_depth(folder, frame_index, side, do_flip)
+        #     inputs["depth_gt"] = np.expand_dims(depth_gt, 0)
+        #     inputs["depth_gt"] = torch.from_numpy(inputs["depth_gt"].astype(np.float32))
 
         return inputs
 

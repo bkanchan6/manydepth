@@ -54,7 +54,7 @@ class MonodepthOptions:
                                  type=str,
                                  help="dataset to train on",
                                  default="kitti",
-                                 choices=["kitti", "kitti_odom", "kitti_depth", "kitti_test",
+                                 choices=["kitti", "kitti_odom", "kitti_depth", "kitti_test", "simbe",
                                           "cityscapes_preprocessed"])
         self.parser.add_argument("--png",
                                  help="if set, trains from raw KITTI png files (instead of jpgs)",
@@ -62,7 +62,7 @@ class MonodepthOptions:
         self.parser.add_argument("--height",
                                  type=int,
                                  help="input image height",
-                                 default=192)
+                                 default=480)
         self.parser.add_argument("--width",
                                  type=int,
                                  help="input image width",

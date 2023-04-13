@@ -139,7 +139,8 @@ class Trainer:
         # DATA
         datasets_dict = {"kitti": datasets.KITTIRAWDataset,
                          "cityscapes_preprocessed": datasets.CityscapesPreprocessedDataset,
-                         "kitti_odom": datasets.KITTIOdomDataset}
+                         "kitti_odom": datasets.KITTIOdomDataset,
+                         "simbe": datasets.SimbeDataset}
         self.dataset = datasets_dict[self.opt.dataset]
 
         fpath = os.path.join("splits", self.opt.split, "{}_files.txt")
@@ -257,7 +258,6 @@ class Trainer:
         for batch_idx, inputs in enumerate(self.train_loader):
 
             before_op_time = time.time()
-
             outputs, losses = self.process_batch(inputs, is_train=True)
             self.model_optimizer.zero_grad()
             losses["loss"].backward()
@@ -478,10 +478,10 @@ class Trainer:
         """
         self.set_eval()
         try:
-            inputs = self.val_iter.next()
+            inputs = next(self.val_iter) #.next()
         except StopIteration:
             self.val_iter = iter(self.val_loader)
-            inputs = self.val_iter.next()
+            inputs = next(self.val_iter) #.next()
 
         with torch.no_grad():
             outputs, losses = self.process_batch(inputs)
@@ -511,7 +511,6 @@ class Trainer:
             outputs[("depth", 0, scale)] = depth
 
             for i, frame_id in enumerate(self.opt.frame_ids[1:]):
-
                 T = outputs[("cam_T_cam", 0, frame_id)]
                 if is_multi:
                     # don't update posenet based on multi frame prediction
@@ -778,10 +777,10 @@ class Trainer:
                     "consistency_mask/{}".format(j),
                     consistency_mask, self.step)
 
-                consistency_target = colormap(outputs["consistency_target/0"][j])
-                writer.add_image(
-                    "consistency_target/{}".format(j),
-                    consistency_target, self.step)
+                # consistency_target = colormap(outputs["consistency_target/0"][j])
+                # writer.add_image(
+                #     "consistency_target/{}".format(j),
+                #     consistency_target, self.step)
 
     def save_opts(self):
         """Save options to disk so we know what we ran this experiment with
